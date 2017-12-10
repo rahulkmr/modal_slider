@@ -1,104 +1,151 @@
 import React, { Component } from 'react'
-import {
-  Carousel,
-  CarouselItem,
-  CarouselControl,
-  CarouselIndicators,
-  CarouselCaption
-} from 'reactstrap'
-import logo from './logo.svg'
+import { CSSTransition, TransitionGroup } from 'react-transition-group'
+import 'bootstrap/dist/css/bootstrap.css'
 import './App.css'
-
-const step1 = () => <h1>Step 1</h1>
-const step2 = () => <h2>Step 2</h2>
-const step3 = () => <h3>Step 3</h3>
+import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'reactstrap'
 
 
-const items = [
-  {
-    id: 1,
-    src: step1,
-    caption: 'Caption 1',
-    captionHeader: 'Caption header 1',
-  },
-  {
-    id: 2,
-    src: step2,
-    caption: 'Caption 2',
-    captionHeader: 'Caption header 2',
-  },
-  {
-    id: 3,
-    src: step2,
-    caption: 'Caption 3',
-    captionHeader: 'Caption header 3',
+class Step1 extends Component {
+  render() {
+    return <h1>Step 1 and filler text</h1>
   }
-]
+}
 
-class MultiStepForm extends Component {
+
+class Step2 extends Component {
+  render() {
+    return <h1>Step 2 and filler text</h1>
+  }
+}
+
+
+class Step3 extends Component {
+  render() {
+    return <h1>Step 3 and filler text</h1>
+  }
+}
+
+const Slide = ({ children, ...props }) => (
+  <CSSTransition {...props}>
+    {children}
+  </CSSTransition>
+)
+
+
+class MultiStepper extends Component {
   constructor(props) {
     super(props)
-    this.state = { activeIndex: 0 }
+    this.slideTransitionClassNames = {
+      next: { enter: 'enter-from-right', enterActive: 'enter', exit: 'exit', exitActive: 'exit-to-left-active' },
+      previous: { enter: 'enter-from-left', enterActive: 'enter', exit: 'exit', exitActive: 'exit-to-right-active' },
+    }
+    this.currentTransitionClassNames = this.slideTransitionClassNames.next
+    this.itemsLen = this.props.children.length
+    this.state = { activeIndex: 0, open: true }
     this.next = this.next.bind(this)
     this.previous = this.previous.bind(this)
-    this.onExiting = this.onExiting.bind(this)
-    this.onExited = this.onExited.bind(this)
+    this.toggle = this.toggle.bind(this)
   }
 
-  onExiting() {
-    this.animating = true
+  toggle() {
+    this.setState({
+      open: !this.state.open
+    })
   }
 
-  onExited() {
-    this.animating = false
+  isFirst() {
+    return this.state.activeIndex === 0
+  }
+
+  isLast() {
+    return this.state.activeIndex === this.itemsLen - 1
   }
 
   next() {
-    if (this.animating) return
-    const nextIndex = this.state.activeIndex === items.length - 1 ? this.state.activeIndex : this.state.activeIndex + 1
+    const nextIndex =
+      this.state.activeIndex === this.itemsLen - 1
+        ? this.state.activeIndex
+        : this.state.activeIndex + 1
+    this.currentTransitionClassNames = this.slideTransitionClassNames.next
     this.setState({ activeIndex: nextIndex })
   }
 
   previous() {
-    if (this.animating) return
-    const nextIndex = this.state.activeIndex === 0 ? 0 : this.state.activeIndex - 1
+    const nextIndex =
+      this.state.activeIndex === 0 ? 0 : this.state.activeIndex - 1
+    this.currentTransitionClassNames = this.slideTransitionClassNames.previous
     this.setState({ activeIndex: nextIndex })
   }
 
-  render() {
-    const { activeIndex } = this.state
-
-    const slides = items.map((item) => {
-      return (
-        <CarouselItem
-          onExiting={this.onExiting}
-          onExited={this.onExited}
-          key={item.id}
-          src={item.src}
-        >
-          <CarouselCaption captionText={item.caption} captionHeader={item.captionHeader} />
-        </CarouselItem>
-      )
-    })
+  nextButton() {
+    if (this.isLast()) {
+      return this.saveButton()
+    }
 
     return (
-      <Carousel
-        activeIndex={activeIndex}
-        next={this.next}
-        previous={this.previous}
-      >
-        {slides}
-        <CarouselControl direction="prev" directionText="Previous" onClickHandler={this.previous} />
-        <CarouselControl direction="next" directionText="Next" onClickHandler={this.next} />
-      </Carousel>
+      <Button color="primary" onClick={this.next}>
+        Next
+      </Button>
     )
   }
+
+  saveButton() {
+    return (
+      <Button color="primary" onClick={this.save}>
+        Save
+      </Button>
+    )
+  }
+
+  prevButton() {
+    return (
+      <Button color="primary" onClick={this.previous}>
+        Prev
+      </Button>
+    )
+  }
+
+  static childFactoryCreator = (classNames) => (
+    (child) => (
+      React.cloneElement(child, {
+        classNames
+      })
+    )
+  )
+
+  render() {
+    const { activeIndex } = this.state
+    const item = this.props.children[activeIndex]
+    return <div>
+        <Modal isOpen={this.state.open} toggle={this.toggle} className={this.props.className}>
+          <ModalHeader toggle={this.toggle}>Modal title</ModalHeader>
+          <ModalBody>
+            <TransitionGroup className='slide-container' childFactory={MultiStepper.childFactoryCreator(this.currentTransitionClassNames)}>
+              <Slide key={activeIndex} timeout={500} classNames={this.currentTransitionClassNames}>
+                <div className='slide-content'>
+                  {item}
+                </div>
+              </Slide>
+            </TransitionGroup>
+          </ModalBody>
+          <ModalFooter>
+            {this.prevButton()}
+            {this.nextButton()}
+          </ModalFooter>
+        </Modal>
+      </div>
+  }
 }
+
 
 class App extends Component {
   render() {
     return (
-      <MultiStepForm />
+      <MultiStepper>
+        <Step1 />
+        <Step2 />
+        <Step3 />
+      </MultiStepper>
     )
   }
 }
